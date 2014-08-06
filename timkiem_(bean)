@@ -1,0 +1,111 @@
+// BLL
+    public FBeans getAll_search(FSeed seed) throws EException {
+        final String LOCATION = this + "->getAll_search()";
+        FBeans result = null;
+        Connection conn = null;
+        try {
+            conn = DBConnector.getConnection();
+            DBConnector.startTransaction(conn);
+            Dtracuu_hoso dao = new Dtracuu_hoso();
+            result = dao.getAll_search(conn, seed);
+            DBConnector.endTransaction(conn);
+        } catch (EException ex) {
+            DBConnector.rollBackTransaction(conn);
+            if (AppConfigs.APP_DEBUG)
+                throw new EException(LOCATION, ex);
+        } finally {
+            DBConnector.closeConnection(conn);
+        }
+        return result;
+    }
+    
+// DAL
+    public FBeans getAll_search(Connection cnn, FSeed seed) throws EException {
+            final String LOCATION = this.toString() + "getAll_search()";
+            PreparedStatement prpstm = null;
+            Fluanchuyen_max bean = (Fluanchuyen_max)seed;
+            ResultSet rs = null;
+            FBeans beans = null;
+            List params = new ArrayList();
+            String SQL2="";
+            SQL2+= " select distinct(vqh_tbhoso.idhoso),vqh_tbhoso.biennhan_so,vqh_tblquan.ten as diadiem_quan,vqh_tbhoso.idloaihoso,vqh_tbloaihoso.ten as tenloaihoso,vqh_tbhoso.ngaynhan,vqh_tbhoso.ngayhentra, ";
+            SQL2+= " vqh_tbhoso.chudautu ,vqh_tbhoso.tenduan,vqh_tbluanchuyenmax.nhan_group_name,vqh_tbluanchuyenmax.id,vqh_tbphanloaihoso.phanloai_ten, ";
+            SQL2+= " vqh_tbluanchuyenmax.idphase,vqh_tbhoso.canbotiepnhan_id,vqh_tbhoso.canbotheodoi_id ";
+            SQL2+= " from vqh_tbhoso inner join vqh_tbluanchuyenmax on vqh_tbhoso.idhoso=vqh_tbluanchuyenmax.idhoso ";
+            SQL2+= " inner join vqh_tbphanloaihoso on vqh_tbphanloaihoso.phanloai_ma=vqh_tbluanchuyenmax.phanloai ";
+            SQL2+= " inner join vqh_tbloaihoso on vqh_tbhoso.idloaihoso=vqh_tbloaihoso.id ";
+            SQL2+= " inner join vqh_tblquan on vqh_tbhoso.idquan=vqh_tblquan.id ";
+            SQL2+= " where 1=1 ";
+            
+            // SQL2+="select * from vqh_tbhoso where 1=1 ";
+            if(bean.getIdloaihoso()>0){
+                SQL2+= " and vqh_tbhoso.idloaihoso= ? ";
+                params.add(bean.getIdloaihoso());
+            }
+            if(bean.getIdhoso()>0){
+                SQL2+= " and vqh_tbhoso.idhoso= ? ";
+                params.add(bean.getIdhoso());
+            }
+            if (bean.getTungay_dk() != null && !bean.getTungay_dk().equals("")){
+                SQL2+= " AND to_char(vqh_tbhoso.ngaynhan,'dd/mm/yyyy') >= ? ";
+                params.add(bean.getTungay_dk());
+                //params.add(bean.addDays(bean.stringToDate(bean.getTungay_dk()), 1));
+            }
+            if (bean.getDenngay_dk() != null && !bean.getDenngay_dk().equals("")){
+                SQL2+= " AND to_char(vqh_tbhoso.ngaynhan,'dd/mm/yyyy') <= ? ";
+                params.add(bean.getDenngay_dk());
+            }
+            if (bean.getChudautu() != null && !bean.getChudautu().equals("")){
+                SQL2+= " AND vqh_tbhoso.chudautu ILIKE ? ";
+                params.add("%"+bean.getChudautu()+"%");
+            }
+            if (bean.getIdquan() >0) {
+                SQL2+= " AND vqh_tbhoso.idquan = ? ";
+                params.add(bean.getIdquan());
+            }       
+            if(bean.getNhomcongtrinh_id()==1){
+                SQL2+= " AND vqh_tbhoso.nhomcongtrinh_id = ? ";
+                params.add(bean.getNhomcongtrinh_id());
+            }
+            if(bean.getNhomcongtrinh_id()==2) {
+                SQL2+= " AND vqh_tbhoso.nhomcongtrinh_id = ? ";
+                params.add(bean.getNhomcongtrinh_id());
+            }
+            SQL2+= " order by vqh_tbhoso.idhoso desc";              
+            try {
+                prpstm = prepareStatement(cnn, SQL2, params);
+                beans = new FBeans();
+                while ((rs != null) && (rs.next())) {
+                    bean = new Fluanchuyen_max();
+                    //bean = getInformation(rs, true);
+                    bean.setId(rs.getInt("id"));
+                    bean.setBiennhan_so(rs.getString("biennhan_so"));
+                    bean.setChudautu(rs.getString("chudautu"));
+                    bean.setTenduan(rs.getString("tenduan"));
+                    bean.setNhan_ngay(bean.dateToString(rs.getDate("ngaynhan")));
+                    int temp = bean.getDays(rs.getDate("ngaynhan"), bean.getCurrentSqlDate());
+                    bean.setNewHS((temp >= 0 && temp <= 2) ? 1 : 0);
+                    bean.setNgayhentra(bean.dateToString(rs.getDate("ngayhentra")));
+                    bean.setNhan_group_name(rs.getString("nhan_group_name"));
+                    bean.setPhanloai_ten(rs.getString("phanloai_ten"));
+                    bean.setIdloaihoso(rs.getInt("idloaihoso"));
+                    bean.setIdhoso(rs.getInt("idhoso"));
+                    bean.setIdphase(rs.getInt("idphase"));
+                    bean.setCanbotheodoi_id(rs.getInt("canbotheodoi_id"));
+                    bean.setCanbotiepnhan_id(rs.getInt("canbotiepnhan_id"));
+                    bean.setTenloaihoso(rs.getString("tenloaihoso"));
+                    bean.setDiaban(rs.getString("diadiem_quan"));
+                    beans.add(bean);
+//                    FDmLoaiCauTraLoi bean = new FDmLoaiCauTraLoi();
+//                    bean.setLoaicautraloi_id(rs.getInt("loaicautraloi_id"));
+                    //FDmLoaiCauTraLoi.add(bean);
+                }
+            } catch (SQLException sqle) {
+                if (AppConfigs.APP_DEBUG)
+                    throw new EException(LOCATION, sqle);
+            } finally {
+                closeResultSet(rs);
+                closePreparedStatement(prpstm);
+            }
+            return beans;
+        }
