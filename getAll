@@ -1,0 +1,57 @@
+// lấy tất cả bản ghi
+
+// BLL
+
+    public FBeans getAllLoaiCauTraLoi() throws EException {
+        final String LOCATION = this + "->getAllLoaiCauTraLoi()";
+        FBeans result = null;
+        Connection conn = null;        
+        try {
+           
+            conn = DBConnector.getConnection();
+            DBConnector.startTransaction(conn);
+            DDmLoaiCauTraLoi dao = new DDmLoaiCauTraLoi();
+            result = dao.getAllLoaiCauTraLoi(conn);
+            DBConnector.endTransaction(conn);
+        } catch (EException ex) {
+            DBConnector.rollBackTransaction(conn);
+            if (AppConfigs.APP_DEBUG)
+                throw new EException(LOCATION, ex);
+        } finally {
+            DBConnector.closeConnection(conn);
+        }
+        return result;
+    }
+    
+// DAL
+    public FBeans getAllLoaiCauTraLoi(Connection cnn) throws EException {
+        final String LOCATION = this.toString() + "getAllLoaiCauTraLoi()";
+        FBeans beans = null;
+        PreparedStatement prstm = null;
+        ResultSet rs = null;
+        String query="select * from vqh_tbloaicautraloi";
+        try {
+            prstm = cnn.prepareStatement(query);
+            rs = prstm.executeQuery();
+            beans = new FBeans();
+            while ((rs != null) && (rs.next())) {
+                FDmLoaiCauTraLoi bean = new FDmLoaiCauTraLoi();
+                bean.setLoaicautraloi_id(rs.getInt("loaicautraloi_id"));
+                bean.setTenloai(rs.getString("tenloai"));
+                bean.setHinhthuc(rs.getInt("hinhthuc"));
+                bean.setLoaihienthi(rs.getInt("loaihienthi"));
+                beans.add(bean);
+            }
+        } catch (SQLException sqle) {
+            if (AppConfigs.APP_DEBUG)
+                throw new EException(LOCATION, sqle);
+        } finally {
+            closeResultSet(rs);
+            closePreparedStatement(prstm);
+        }
+        return beans;
+    }
+
+
+
+
