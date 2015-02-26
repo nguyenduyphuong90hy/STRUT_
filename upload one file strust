@@ -1,0 +1,94 @@
+- F
+ private FormFile[] file;
+ 
+     public void setFile(FormFile[] file) {
+        this.file = file;
+    }
+
+    public FormFile[] getFile() {
+        return file;
+    }
+    public void resetFiles() {
+        this.file = null;
+    }    
+    
+    public int getTotalFile() {
+        if (file != null) {
+            return file.length;
+        }
+        return 0;
+    }
+        
+    public FormFile getFile(int i) {
+        if (file != null && file.length > 0 && file.length > i) {
+            return file[i];
+        }
+        return null;
+    }
+
+    public void setFile(int i, FormFile file) {
+        if (file.getFileSize() > 0) {
+            FormFile[] mem = null;
+            int k = this.file == null ? 0 : this.file.length;
+            if (k > 0) {
+                mem = new FormFile[k + 1];
+                for (int j = 0; j < k; j++) {
+                    mem[j] = this.file[j];
+                }
+            }
+            this.file = new FormFile[k + 1];
+            this.file[k] = file;
+            if (k > 0) {
+                for (int j = 0; j < k; j++) {
+                    this.file[j] = mem[j];
+                }
+            }
+        }
+    }
+    
+  - A
+  if (bean.getTotalFile() > 0) {
+          for (int i = 0; i < bean.getTotalFile(); i++) {
+               bo.uploadMultiFile(bean, i);
+           }
+               }
+  - D
+      public boolean uploadMultiFile(Connection cnn, Fmauhopdong bean,int indexFile) throws EException,IOException {
+        final String LOCATION = this.toString() + "uploadMultiFile";
+        boolean result = false;
+        PreparedStatement prstm = null;
+        //String path = AppConfigs.APP_SYSTEM_PATH + IKeyAdmin.REPORT_FILE_PATH;
+        String path = AppConfigs.APP_SYSTEM_PATH + "quanlyhopdong\\inhopdong\\template";
+        //String pathNew = AppConfigs.APP_SYSTEM_PATH + IKeyAdmin.REPORT_FILE_PATH + bean.me.getSessionID();
+        String filePath = path + "\\"+ bean.getFile(indexFile).getFileName();
+        File folder = new File(path);
+        if(!folder.exists()){
+            folder.mkdirs();
+        }
+        
+        File newFile = new File(path, bean.getFile(indexFile).getFileName());
+        if(!newFile.exists()){
+            newFile.createNewFile();   
+        } 
+        FileOutputStream fos = new FileOutputStream(newFile);
+        fos.write(bean.getFile(indexFile).getFileData());
+        fos.flush();
+        fos.close();
+        
+        try{
+            prstm = cnn.prepareStatement("INSERT INTO vqh_tbmauhopdong(tenmauhopdong, tenfile, duongdanfile, trangthai) VALUES (?, ?, ?, ?)");
+            prstm.setString(1, bean.getTenmauhopdong());
+            prstm.setString(2, bean.getFile(indexFile).getFileName());
+            prstm.setString(3, filePath);
+            prstm.setInt(4, 1);
+            if (prstm.executeUpdate() > 0) {
+                result = true;
+            }
+        }catch (Exception sqle) {
+            if (AppConfigs.APP_DEBUG)
+                throw new EException(LOCATION, sqle);
+        } finally {
+            closePreparedStatement(prstm);
+        }
+        return result;
+    }
